@@ -1,14 +1,14 @@
 package network;
 
-import com.sun.org.apache.xalan.internal.xsltc.runtime.Hashtable;
-
+import java.util.HashMap;
 import java.util.Map;
 
 /**
  * Created by Anton on 27.06.2015.
- * Сообщение, отправляемое клиентом через Stomp
+ * Сообщение, отправляемое клиентом
  */
 public class Message {
+    public String controller;
     public String action;
-    public Map vars;
+    public HashMap<String, String> data;
 }
