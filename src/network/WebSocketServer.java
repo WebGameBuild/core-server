@@ -48,9 +48,18 @@ public class WebSocketServer implements Runnable {
             this.status = status;
             this.data = data;
         }
-        public Response() {}
+
+        public Response() {
+        }
+
         public String status;
         public HashMap<String, String> data;
+    }
+
+    class InvalidRequestException extends Exception {
+        public InvalidRequestException(String s) {
+            super(s);
+        }
     }
 
     class UserWebSocket implements WebSocket.OnTextMessage {
@@ -61,32 +70,41 @@ public class WebSocketServer implements Runnable {
         public void onMessage(String data) {
             Gson gson = new Gson();
             Message msg = gson.fromJson(data.trim(), Message.class);
+            Response response = new Response();
             try {
-                if (msg.action == null) {
-                    throw new IllegalAccessException("Action not specified");
+                try {
+                    if (msg.action == null) {
+                        throw new IllegalAccessException("Action not specified");
+                    }
+                    if (msg.action.matches(".*[^a-zA-Z].*")) {
+                        throw new IllegalAccessException("Wrong class name");
+                    }
+                    Controller controller = (Controller) Class.forName("controllers." + msg.controller).newInstance();
+                    controller.init(msg.data, connection);
+                    Method action = controller.getClass().getMethod(msg.action, HashMap.class);
+                    response.data = (HashMap<String, String>) action.invoke(controller, msg.data);
+                    response.status = "success";
+                } catch (NoSuchMethodException e) {
+                    throw  new InvalidRequestException("Invalid action: " + msg.action);
+                } catch (NoClassDefFoundError e) {
+                    throw  new InvalidRequestException("Controller not found: " + msg.controller);
+                } catch (ClassNotFoundException e) {
+                    throw  new InvalidRequestException("Controller not found: " + msg.controller);
+                } catch (IllegalAccessException e) {
+                    throw  new InvalidRequestException("Invalid action: " + msg.action);
+                } catch (InstantiationException e) {
+                    e.printStackTrace();
+                } catch (InvocationTargetException e) {
+                    e.printStackTrace();
                 }
-                if (msg.action.matches(".*[^a-zA-Z].*")) {
-                    throw new IllegalAccessException("Wrong class name");
-                }
-                Controller controller = (Controller) Class.forName("controllers." + msg.controller).newInstance();
-                controller.init(msg.data, connection);
-                Method action = controller.getClass().getMethod(msg.action, HashMap.class);
-                Response response = new Response();
-                response.data = (HashMap<String, String>) action.invoke(controller, msg.data);
-                response.status = "success";
+            } catch(InvalidRequestException requestException) {
+                response.status = "error";
+                response.data = new HashMap<String, String>(1);
+                response.data.put("message", requestException.getMessage());
+            }
+
+            try {
                 this.connection.sendMessage(gson.toJson(response));
-            } catch (NoSuchMethodException e) {
-                System.out.println("Action not found: " + msg.action);
-            } catch (NoClassDefFoundError e) {
-                System.out.println("Controller not found: " + msg.action);
-            } catch (ClassNotFoundException e) {
-                System.out.println("Controller not found: " + msg.action);
-            } catch (IllegalAccessException e) {
-                System.out.println("Action wrong name:" + msg.action);
-            } catch (InstantiationException e) {
-                e.printStackTrace();
-            } catch (InvocationTargetException e) {
-                e.printStackTrace();
             } catch (IOException e) {
                 e.printStackTrace();
             }
