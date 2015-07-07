@@ -2,7 +2,7 @@ package network;
 
 /**
  * Created by Anton on 27.06.2015.
- * Сообщение, отправляемое клиентом
+ * РЎРѕРѕР±С‰РµРЅРёРµ, РѕС‚РїСЂР°РІР»СЏРµРјРѕРµ РєР»РёРµРЅС‚РѕРј
  */
 public class Message {
     public String controller;

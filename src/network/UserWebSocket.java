@@ -2,9 +2,6 @@ package network;
 
 import org.eclipse.jetty.websocket.WebSocket;
 
-/**
- * Created by Anton on 30.06.2015.
- */
 public class UserWebSocket implements WebSocket.OnTextMessage {
 
     @Override
