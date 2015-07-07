@@ -1,5 +1,7 @@
 package network;
 
+import annotations.PrivateAction;
+import annotations.PublicAction;
 import com.google.gson.Gson;
 import org.eclipse.jetty.server.Server;
 import org.eclipse.jetty.server.handler.ContextHandler;
@@ -48,8 +50,10 @@ public class WebSocketServer implements Runnable {
             this.status = status;
             this.data = data;
         }
+
         public Response() {
         }
+
         public String status;
         public JsonData data;
     }
@@ -80,22 +84,27 @@ public class WebSocketServer implements Runnable {
                     Controller controller = (Controller) Class.forName("controllers." + msg.controller).newInstance();
                     controller.init(msg.data, connection);
                     Method action = controller.getClass().getMethod(msg.action, JsonData.class);
-                    response.data = (JsonData) action.invoke(controller, msg.data);
+                    if (action.isAnnotationPresent(PublicAction.class)
+                            || action.isAnnotationPresent(PrivateAction.class)) {
+                        response.data = (JsonData) action.invoke(controller, msg.data);
+                    } else {
+                        throw new InvalidRequestException("Access forbidden: " + msg.controller + "/" + msg.action);
+                    }
                     response.status = "success";
                 } catch (NoSuchMethodException e) {
-                    throw  new InvalidRequestException("Invalid action: " + msg.action);
+                    throw new InvalidRequestException("Invalid action: " + msg.action);
                 } catch (NoClassDefFoundError e) {
-                    throw  new InvalidRequestException("Controller not found: " + msg.controller);
+                    throw new InvalidRequestException("Controller not found: " + msg.controller);
                 } catch (ClassNotFoundException e) {
-                    throw  new InvalidRequestException("Controller not found: " + msg.controller);
+                    throw new InvalidRequestException("Controller not found: " + msg.controller);
                 } catch (IllegalAccessException e) {
-                    throw  new InvalidRequestException("Invalid action: " + msg.action);
+                    throw new InvalidRequestException("Invalid action: " + msg.action);
                 } catch (InstantiationException e) {
                     e.printStackTrace();
                 } catch (InvocationTargetException e) {
                     e.printStackTrace();
                 }
-            } catch(InvalidRequestException requestException) {
+            } catch (InvalidRequestException requestException) {
                 response.status = "error";
                 response.data = new JsonData(1);
                 response.data.put("message", requestException.getMessage());
