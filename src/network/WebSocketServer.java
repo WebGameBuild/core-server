@@ -44,16 +44,14 @@ public class WebSocketServer implements Runnable {
     }
 
     class Response {
-        public Response(String status, HashMap<String, String> data) {
+        public Response(String status, JsonData data) {
             this.status = status;
             this.data = data;
         }
-
         public Response() {
         }
-
         public String status;
-        public HashMap<String, String> data;
+        public JsonData data;
     }
 
     class InvalidRequestException extends Exception {
@@ -81,8 +79,8 @@ public class WebSocketServer implements Runnable {
                     }
                     Controller controller = (Controller) Class.forName("controllers." + msg.controller).newInstance();
                     controller.init(msg.data, connection);
-                    Method action = controller.getClass().getMethod(msg.action, HashMap.class);
-                    response.data = (HashMap<String, String>) action.invoke(controller, msg.data);
+                    Method action = controller.getClass().getMethod(msg.action, JsonData.class);
+                    response.data = (JsonData) action.invoke(controller, msg.data);
                     response.status = "success";
                 } catch (NoSuchMethodException e) {
                     throw  new InvalidRequestException("Invalid action: " + msg.action);
@@ -99,7 +97,7 @@ public class WebSocketServer implements Runnable {
                 }
             } catch(InvalidRequestException requestException) {
                 response.status = "error";
-                response.data = new HashMap<String, String>(1);
+                response.data = new JsonData(1);
                 response.data.put("message", requestException.getMessage());
             }
 

@@ -1,13 +1,12 @@
 package controllers;
 
 import network.Controller;
-
-import java.util.HashMap;
+import network.JsonData;
 
 public class Test extends Controller {
 
-    public HashMap build(HashMap<String, String> params) {
-        HashMap<String, String> data = new HashMap<String, String>();
+    public JsonData build(JsonData params) {
+        JsonData data = new JsonData();
         data.put("loh", params.get("text"));
         return data;
     }
