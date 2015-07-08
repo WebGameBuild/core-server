@@ -7,13 +7,15 @@ public class Main {
 
     public static void main(String[] args) throws Exception {
 
+        // initialize data store
+        DS.morphia.mapPackage("models.db");
+        DS.getDatastore().ensureIndexes();
+
+
+        // initialize web socket server
         WebSocketServer wsServer = new WebSocketServer();
         wsServer.run();
 
     }
 
-    public void initDataStorage()
-    {
-        DS.morphia.mapPackage("models");
-    }
 }

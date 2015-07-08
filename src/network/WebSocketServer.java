@@ -3,6 +3,8 @@ package network;
 import annotations.PrivateAction;
 import annotations.PublicAction;
 import com.google.gson.Gson;
+import models.db.User;
+import network.exceptions.InvalidRequestException;
 import org.eclipse.jetty.server.Server;
 import org.eclipse.jetty.server.handler.ContextHandler;
 import org.eclipse.jetty.websocket.WebSocket;
@@ -27,7 +29,6 @@ public class WebSocketServer implements Runnable {
             contextHandler.setHandler(new Handler());
             contextHandler.setContextPath("/");
             server.setHandler(contextHandler);
-
             server.start();
             server.join();
 
@@ -58,15 +59,10 @@ public class WebSocketServer implements Runnable {
         public JsonData data;
     }
 
-    class InvalidRequestException extends Exception {
-        public InvalidRequestException(String s) {
-            super(s);
-        }
-    }
-
-    class UserWebSocket implements WebSocket.OnTextMessage {
+    public class UserWebSocket implements WebSocket.OnTextMessage {
 
         public Connection connection;
+        public User user;
 
         @Override
         public void onMessage(String data) {
@@ -82,11 +78,10 @@ public class WebSocketServer implements Runnable {
                         throw new IllegalAccessException("Wrong class name");
                     }
                     Controller controller = (Controller) Class.forName("controllers." + msg.controller).newInstance();
-                    controller.init(msg.data, connection);
-                    Method action = controller.getClass().getMethod(msg.action, JsonData.class);
+                    Method action = controller.getClass().getMethod(msg.action, JsonData.class, UserWebSocket.class);
                     if (action.isAnnotationPresent(PublicAction.class)
                             || action.isAnnotationPresent(PrivateAction.class)) {
-                        response.data = (JsonData) action.invoke(controller, msg.data);
+                        response.data = (JsonData) action.invoke(controller, msg.data, this);
                     } else {
                         throw new InvalidRequestException("Access forbidden: " + msg.controller + "/" + msg.action);
                     }
@@ -102,7 +97,12 @@ public class WebSocketServer implements Runnable {
                 } catch (InstantiationException e) {
                     e.printStackTrace();
                 } catch (InvocationTargetException e) {
-                    e.printStackTrace();
+                    Throwable targetException = e.getTargetException();
+                    if (targetException instanceof InvalidRequestException) {
+                        throw (InvalidRequestException) targetException;
+                    } else {
+                        e.printStackTrace();
+                    }
                 }
             } catch (InvalidRequestException requestException) {
                 response.status = "error";
@@ -120,6 +120,7 @@ public class WebSocketServer implements Runnable {
         @Override
         public void onOpen(Connection connection) {
             this.connection = connection;
+            connection.setMaxIdleTime(0);
             System.out.println("Client connected: " + connection.toString());
             connections.put(connection.toString(), this);
         }

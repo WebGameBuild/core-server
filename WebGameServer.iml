@@ -11,5 +11,6 @@
     <orderEntry type="library" name="org.mongodb.morphia:morphia:1.0.1" level="project" />
     <orderEntry type="library" name="com.google.code.gson:gson:2.3.1" level="project" />
     <orderEntry type="library" name="org.eclipse.jetty:jetty-websocket:8.1.14.v20131031" level="project" />
+    <orderEntry type="library" name="apache-codec:commons-codec:1.2" level="project" />
   </component>
 </module>
