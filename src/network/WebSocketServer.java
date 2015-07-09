@@ -5,6 +5,7 @@ import annotations.PublicAction;
 import com.google.gson.Gson;
 import models.db.User;
 import network.exceptions.InvalidRequestException;
+import org.bson.types.ObjectId;
 import org.eclipse.jetty.server.Server;
 import org.eclipse.jetty.server.handler.ContextHandler;
 import org.eclipse.jetty.websocket.WebSocket;
@@ -19,8 +20,8 @@ import java.util.HashMap;
 
 public class WebSocketServer implements Runnable {
 
-    protected final Server server = new Server(8080);
-    protected final HashMap<String, UserWebSocket> connections = new HashMap<String, UserWebSocket>();
+    protected final Server server = new Server(82);
+    public static final HashMap<ObjectId, UserWebSocket> connections = new HashMap<ObjectId, UserWebSocket>();
 
     public void run() {
 
@@ -122,13 +123,14 @@ public class WebSocketServer implements Runnable {
             this.connection = connection;
             connection.setMaxIdleTime(0);
             System.out.println("Client connected: " + connection.toString());
-            connections.put(connection.toString(), this);
         }
 
         @Override
         public void onClose(int closeCode, String message) {
             System.out.println("Client disconnected: " + connection.toString());
-            connections.remove(connection.toString());
+            if(user != null) {
+                connections.remove(user.id);
+            }
             connection.close();
         }
     }

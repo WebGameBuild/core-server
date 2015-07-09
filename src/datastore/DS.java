@@ -1,6 +1,8 @@
 package datastore;
 
 import org.mongodb.morphia.Morphia;
+import org.mongodb.morphia.mapping.MapperOptions;
+
 import java.net.UnknownHostException;
 
 public class DS {
@@ -12,6 +14,7 @@ public class DS {
         if (datastore == null) {
             try {
                 datastore = morphia.createDatastore(Database.getMongoClient(), "wg");
+                morphia.getMapper().getOptions().setStoreNulls(true);
             } catch (UnknownHostException e) {
                 e.printStackTrace();
             }

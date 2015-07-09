@@ -8,6 +8,8 @@ import network.Controller;
 import network.JsonData;
 import network.WebSocketServer;
 import network.exceptions.InvalidRequestException;
+import org.mongodb.morphia.query.Query;
+import org.mongodb.morphia.query.UpdateOperations;
 
 import java.io.UnsupportedEncodingException;
 import java.security.MessageDigest;
@@ -19,11 +21,14 @@ public class Auth extends Controller {
 
     @PublicAction
     public JsonData register(JsonData request, WebSocketServer.UserWebSocket socket)
-            throws NoSuchAlgorithmException, UnsupportedEncodingException
-    {
+            throws NoSuchAlgorithmException, UnsupportedEncodingException, InvalidRequestException {
+        String username = request.get("username").toString();
+        if(DS.getDatastore().createQuery(User.class).filter("username", username).countAll() > 0) {
+            throw  new InvalidRequestException("Username already in use");
+        }
         JsonData response = new JsonData();
         User user = new User();
-        user.username = request.get("username").toString();
+        user.username = username;
         user.password_hash = sha256(request.get("password").toString());
         user.created_at = new Date();
         user.updated_at = new Date();
@@ -71,6 +76,9 @@ public class Auth extends Controller {
         }
 
         socket.user = DS.getDatastore().get(User.class, session.user_id);
+        socket.user.touch();
+
+        WebSocketServer.connections.put(session.user_id, socket);
 
         return response;
     }
