@@ -48,16 +48,9 @@ public class WebSocketServer implements Runnable {
     }
 
     class Response {
-        public Response(String status, JsonData data) {
-            this.status = status;
-            this.data = data;
-        }
-
-        public Response() {
-        }
-
         public String status;
         public JsonData data;
+        public HashMap<String, String> request = new HashMap<>();
     }
 
     public class UserWebSocket implements WebSocket.OnTextMessage {
@@ -68,8 +61,11 @@ public class WebSocketServer implements Runnable {
         @Override
         public void onMessage(String data) {
             Gson gson = new Gson();
+            System.out.println(data.trim());
             Message msg = gson.fromJson(data.trim(), Message.class);
             Response response = new Response();
+            response.request.put("controller", msg.controller);
+            response.request.put("action", msg.action);
             try {
                 try {
                     if (msg.action == null) {
