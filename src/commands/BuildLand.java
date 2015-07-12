@@ -1,11 +1,11 @@
 package commands;
 
 import datastore.DS;
-import models.db.Map;
+import models.db.Land;
 
 import java.util.Random;
 
-public class BuildMap {
+public class BuildLand {
 
     public static void main(String[] args) {
 
@@ -16,7 +16,7 @@ public class BuildMap {
         Random random = new Random();
         for (Integer x = -1000; x <= 1000; x++) {
             for (Integer y = -1000; y <= 1000; y++) {
-                Map cell = new Map();
+                Land cell = new Land();
                 cell.x = x;
                 cell.y = y;
                 cell.landType = (byte) random.nextInt(11);

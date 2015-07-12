@@ -6,9 +6,9 @@ import org.mongodb.morphia.annotations.Id;
 import org.mongodb.morphia.annotations.Index;
 import org.mongodb.morphia.annotations.Indexes;
 
-@Entity(value = "map", noClassnameStored = true)
+@Entity(value = "land", noClassnameStored = true)
 @Indexes(@Index("x, y"))
-public class Map {
+public class Land {
     @Id
     public ObjectId _id;
     public Integer x;

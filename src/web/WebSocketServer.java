@@ -1,15 +1,15 @@
 package web;
 
-import web.annotations.PrivateAction;
-import web.annotations.PublicAction;
 import com.google.gson.Gson;
 import models.db.User;
-import web.exceptions.InvalidRequestException;
 import org.bson.types.ObjectId;
 import org.eclipse.jetty.server.Server;
 import org.eclipse.jetty.server.handler.ContextHandler;
 import org.eclipse.jetty.websocket.WebSocket;
 import org.eclipse.jetty.websocket.WebSocketHandler;
+import web.annotations.PrivateAction;
+import web.annotations.PublicAction;
+import web.exceptions.InvalidRequestException;
 
 import javax.servlet.http.HttpServletRequest;
 import java.io.IOException;
@@ -76,9 +76,11 @@ public class WebSocketServer implements Runnable {
                         throw new IllegalAccessException("Action not specified");
                     }
                     if (msg.action.matches(".*[^a-zA-Z].*")) {
-                        throw new IllegalAccessException("Wrong class name");
+                        throw new IllegalAccessException("Illegal action name");
                     }
-                    Controller controller = (Controller) Class.forName("controllers." + msg.controller).newInstance();
+                    Controller controller = (Controller) Class
+                            .forName("controllers." + msg.controller + "Controller")
+                            .newInstance();
                     Method action = controller.getClass().getMethod(msg.action, JsonData.class, UserWebSocket.class);
                     if (action.isAnnotationPresent(PublicAction.class)
                             || action.isAnnotationPresent(PrivateAction.class)) {
@@ -126,7 +128,7 @@ public class WebSocketServer implements Runnable {
         @Override
         public void onClose(int closeCode, String message) {
             System.out.println("Client disconnected: " + connection.toString());
-            if(user != null) {
+            if (user != null) {
                 connections.remove(user.id);
             }
             connection.close();

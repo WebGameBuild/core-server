@@ -16,7 +16,7 @@ import java.security.NoSuchAlgorithmException;
 import java.util.Date;
 import java.util.UUID;
 
-public class Auth extends Controller {
+public class AuthController extends Controller {
 
     @PublicAction
     @Validator(param = "username", type = String.class, required = true)

@@ -6,7 +6,7 @@ import web.Controller;
 import web.JsonData;
 import web.WebSocketServer;
 
-public class Test extends Controller {
+public class TestController extends Controller {
 
     @PrivateAction
     public JsonData echo(JsonData request, WebSocketServer.UserWebSocket socket) {
