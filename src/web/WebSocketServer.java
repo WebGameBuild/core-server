@@ -1,10 +1,10 @@
-package network;
+package web;
 
-import annotations.PrivateAction;
-import annotations.PublicAction;
+import web.annotations.PrivateAction;
+import web.annotations.PublicAction;
 import com.google.gson.Gson;
 import models.db.User;
-import network.exceptions.InvalidRequestException;
+import web.exceptions.InvalidRequestException;
 import org.bson.types.ObjectId;
 import org.eclipse.jetty.server.Server;
 import org.eclipse.jetty.server.handler.ContextHandler;
@@ -82,19 +82,17 @@ public class WebSocketServer implements Runnable {
                     Method action = controller.getClass().getMethod(msg.action, JsonData.class, UserWebSocket.class);
                     if (action.isAnnotationPresent(PublicAction.class)
                             || action.isAnnotationPresent(PrivateAction.class)) {
+                        // выкинет исключение если не пройдет валидация
+                        controller.validate(action, msg.data);
                         response.data = (JsonData) action.invoke(controller, msg.data, this);
                     } else {
                         throw new InvalidRequestException("Access forbidden: " + msg.controller + "/" + msg.action);
                     }
                     response.status = "success";
-                } catch (NoSuchMethodException e) {
+                } catch (NoSuchMethodException | IllegalAccessException e) {
                     throw new InvalidRequestException("Invalid action: " + msg.action);
-                } catch (NoClassDefFoundError e) {
+                } catch (NoClassDefFoundError | ClassNotFoundException e) {
                     throw new InvalidRequestException("Controller not found: " + msg.controller);
-                } catch (ClassNotFoundException e) {
-                    throw new InvalidRequestException("Controller not found: " + msg.controller);
-                } catch (IllegalAccessException e) {
-                    throw new InvalidRequestException("Invalid action: " + msg.action);
                 } catch (InstantiationException e) {
                     e.printStackTrace();
                 } catch (InvocationTargetException e) {

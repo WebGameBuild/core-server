@@ -1,4 +1,4 @@
-package network;
+package web;
 
 /**
  * Created by Anton on 27.06.2015.

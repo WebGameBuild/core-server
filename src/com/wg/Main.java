@@ -1,7 +1,7 @@
 package com.wg;
 
 import datastore.DS;
-import network.WebSocketServer;
+import web.WebSocketServer;
 
 public class Main {
 

@@ -1,10 +1,10 @@
 package controllers;
 
-import annotations.PrivateAction;
-import annotations.PublicAction;
-import network.Controller;
-import network.JsonData;
-import network.WebSocketServer;
+import web.annotations.PrivateAction;
+import web.annotations.PublicAction;
+import web.Controller;
+import web.JsonData;
+import web.WebSocketServer;
 
 public class Test extends Controller {
 

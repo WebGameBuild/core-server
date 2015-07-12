@@ -1,15 +1,14 @@
 package controllers;
 
-import annotations.PublicAction;
 import datastore.DS;
 import models.db.Session;
 import models.db.User;
-import network.Controller;
-import network.JsonData;
-import network.WebSocketServer;
-import network.exceptions.InvalidRequestException;
-import org.mongodb.morphia.query.Query;
-import org.mongodb.morphia.query.UpdateOperations;
+import web.Controller;
+import web.JsonData;
+import web.WebSocketServer;
+import web.annotations.PublicAction;
+import web.annotations.Validator;
+import web.exceptions.InvalidRequestException;
 
 import java.io.UnsupportedEncodingException;
 import java.security.MessageDigest;
@@ -20,11 +19,13 @@ import java.util.UUID;
 public class Auth extends Controller {
 
     @PublicAction
+    @Validator(param = "username", type = String.class, required = true)
+    @Validator(param = "password", type = String.class, required = true)
     public JsonData register(JsonData request, WebSocketServer.UserWebSocket socket)
             throws NoSuchAlgorithmException, UnsupportedEncodingException, InvalidRequestException {
         String username = request.get("username").toString();
-        if(DS.getDatastore().createQuery(User.class).filter("username", username).countAll() > 0) {
-            throw  new InvalidRequestException("Username already in use");
+        if (DS.getDatastore().createQuery(User.class).filter("username", username).countAll() > 0) {
+            throw new InvalidRequestException("Username already in use");
         }
         JsonData response = new JsonData();
         User user = new User();
@@ -39,9 +40,10 @@ public class Auth extends Controller {
     }
 
     @PublicAction
+    @Validator(param = "username", type = String.class, required = true)
+    @Validator(param = "password", type = String.class, required = true)
     public JsonData getToken(JsonData request, WebSocketServer.UserWebSocket socket)
-            throws InvalidRequestException
-    {
+            throws InvalidRequestException {
         JsonData response = new JsonData();
         User user = DS.getDatastore().createQuery(User.class)
                 .filter("username", request.get("username").toString())
@@ -63,9 +65,9 @@ public class Auth extends Controller {
     }
 
     @PublicAction
+    @Validator(param = "token", required = true)
     public JsonData assignToken(JsonData request, WebSocketServer.UserWebSocket socket)
-            throws InvalidRequestException
-    {
+            throws InvalidRequestException {
         JsonData response = new JsonData();
         Session session = DS.getDatastore().createQuery(Session.class)
                 .filter("token", request.get("token").toString())
