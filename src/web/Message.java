@@ -7,5 +7,6 @@ package web;
 public class Message {
     public String controller;
     public String action;
+    public Integer id;
     public JsonData data;
 }

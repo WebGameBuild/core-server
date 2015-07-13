@@ -9,6 +9,7 @@ import web.Controller;
 import web.JsonData;
 import web.WebSocketServer;
 import web.annotations.PublicAction;
+import web.annotations.UserAction;
 import web.annotations.Validator;
 
 import java.util.ArrayList;
@@ -17,7 +18,7 @@ import java.util.Iterator;
 
 public class LandController extends Controller {
 
-    @PublicAction
+    @UserAction
     @Validator(param = "x1", type = Double.class, required = true)
     @Validator(param = "y1", type = Double.class, required = true)
     @Validator(param = "x2", type = Double.class, required = true)
@@ -31,11 +32,12 @@ public class LandController extends Controller {
         query.field("x").lessThanOrEq(((Double) request.get("x2")).intValue());
         query.field("y").lessThanOrEq(((Double) request.get("y2")).intValue());
 
-        ArrayList<HashMap<String, Integer>> cells = new ArrayList<>();
+        ArrayList<HashMap<String, Object>> cells = new ArrayList<>();
         for (Land land : query.asList()) {
-            HashMap<String, Integer> cell = new HashMap<>();
+            HashMap<String, Object> cell = new HashMap<>();
             cell.put("x", land.x);
             cell.put("y", land.y);
+            cell.put("type", land.landType);
             cells.add(cell);
         }
 

@@ -7,7 +7,7 @@ import org.eclipse.jetty.server.Server;
 import org.eclipse.jetty.server.handler.ContextHandler;
 import org.eclipse.jetty.websocket.WebSocket;
 import org.eclipse.jetty.websocket.WebSocketHandler;
-import web.annotations.PrivateAction;
+import web.annotations.UserAction;
 import web.annotations.PublicAction;
 import web.exceptions.InvalidRequestException;
 
@@ -50,7 +50,7 @@ public class WebSocketServer implements Runnable {
     class Response {
         public String status;
         public JsonData data;
-        public HashMap<String, String> request = new HashMap<>();
+        public HashMap<String, Object> request = new HashMap<>();
     }
 
     public class UserWebSocket implements WebSocket.OnTextMessage {
@@ -61,11 +61,11 @@ public class WebSocketServer implements Runnable {
         @Override
         public void onMessage(String data) {
             Gson gson = new Gson();
-            System.out.println(data.trim());
             Message msg = gson.fromJson(data.trim(), Message.class);
             Response response = new Response();
             response.request.put("controller", msg.controller);
             response.request.put("action", msg.action);
+            response.request.put("id", msg.id);
             try {
                 try {
                     if (msg.action == null) {
@@ -79,12 +79,12 @@ public class WebSocketServer implements Runnable {
                             .newInstance();
                     Method action = controller.getClass().getMethod(msg.action, JsonData.class, UserWebSocket.class);
                     if (action.isAnnotationPresent(PublicAction.class)
-                            || action.isAnnotationPresent(PrivateAction.class)) {
+                            || (action.isAnnotationPresent(UserAction.class) && this.user != null)) {
                         // выкинет исключение если не пройдет валидация
                         controller.validate(action, msg.data);
                         response.data = (JsonData) action.invoke(controller, msg.data, this);
                     } else {
-                        throw new InvalidRequestException("Access forbidden: " + msg.controller + "/" + msg.action);
+                        throw new InvalidRequestException("Access forbidden for anonymous user: " + msg.controller + "/" + msg.action);
                     }
                     response.status = "success";
                 } catch (NoSuchMethodException | IllegalAccessException e) {
