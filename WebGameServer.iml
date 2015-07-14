@@ -10,7 +10,7 @@
     <orderEntry type="library" name="org.slf4j:slf4j-simple:1.6.2" level="project" />
     <orderEntry type="library" name="org.mongodb.morphia:morphia:1.0.1" level="project" />
     <orderEntry type="library" name="com.google.code.gson:gson:2.3.1" level="project" />
-    <orderEntry type="library" name="org.eclipse.jetty:jetty-websocket:8.1.17.v20150415" level="project" />
     <orderEntry type="library" name="apache-codec:commons-codec:1.2" level="project" />
+    <orderEntry type="library" name="org.eclipse.jetty.websocket:websocket-server:9.3.0.v20150612" level="project" />
   </component>
 </module>

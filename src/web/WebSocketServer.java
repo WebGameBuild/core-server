@@ -4,21 +4,29 @@ import com.google.gson.Gson;
 import com.google.gson.JsonSyntaxException;
 import models.db.User;
 import org.bson.types.ObjectId;
+import org.eclipse.jetty.io.Connection;
 import org.eclipse.jetty.server.Server;
 import org.eclipse.jetty.server.handler.ContextHandler;
+import org.eclipse.jetty.servlet.ServletContextHandler;
 import org.eclipse.jetty.util.thread.ExecutorThreadPool;
-import org.eclipse.jetty.websocket.WebSocket;
-import org.eclipse.jetty.websocket.WebSocketHandler;
+import org.eclipse.jetty.websocket.api.Session;
+import org.eclipse.jetty.websocket.api.annotations.*;
+import org.eclipse.jetty.websocket.server.WebSocketHandler;
+import org.eclipse.jetty.websocket.servlet.WebSocketServlet;
+import org.eclipse.jetty.websocket.servlet.WebSocketServletFactory;
 import web.annotations.UserAction;
 import web.annotations.PublicAction;
 import web.exceptions.InvalidRequestException;
 
 import javax.servlet.http.HttpServletRequest;
 import java.io.IOException;
+import java.lang.annotation.Annotation;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.util.HashMap;
+import java.util.concurrent.Executors;
 import java.util.concurrent.LinkedBlockingQueue;
+import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 
 
@@ -30,16 +38,10 @@ public class WebSocketServer implements Runnable {
     public void run() {
 
         try {
-            ContextHandler contextHandler = new ContextHandler();
-            contextHandler.setHandler(new Handler());
+            ServletContextHandler contextHandler = new ServletContextHandler();
             contextHandler.setContextPath("/");
+            contextHandler.addServlet(StockServiceSocketServlet.class, "/");
             server.setHandler(contextHandler);
-
-            //thread pool settings
-            LinkedBlockingQueue<Runnable> queue = new LinkedBlockingQueue<>(100);
-            ExecutorThreadPool pool = new ExecutorThreadPool(5, 200, 0, TimeUnit.MILLISECONDS, queue);
-            server.setThreadPool(pool);
-
             server.start();
             server.join();
 
@@ -49,31 +51,32 @@ public class WebSocketServer implements Runnable {
 
     }
 
-    class Handler extends WebSocketHandler {
-
+    public static class StockServiceSocketServlet extends WebSocketServlet {
         @Override
-        public WebSocket doWebSocketConnect(HttpServletRequest request, String protocol) {
-            return new UserWebSocket();
+        public void configure(WebSocketServletFactory factory) {
+            factory.getPolicy().setIdleTimeout(0);
+            factory.register(UserWebSocket.class);
         }
     }
 
-    class Response {
+    public static class Response {
         public String status;
         public JsonData data;
         public HashMap<String, Object> request = new HashMap<>();
     }
 
-    public class UserWebSocket implements WebSocket.OnTextMessage {
+    @WebSocket
+    public static class UserWebSocket {
 
-        public Connection connection;
+        private Session session;
         public User user;
 
-        @Override
-        public void onMessage(String data) {
+        @OnWebSocketMessage
+        public void onMessage(String message) {
             Gson gson = new Gson();
             Response response = new Response();
             try {
-                Message msg = gson.fromJson(data.trim(), Message.class);
+                Message msg = gson.fromJson(message.trim(), Message.class);
                 response.request.put("controller", msg.controller);
                 response.request.put("action", msg.action);
                 response.request.put("id", msg.id);
@@ -124,27 +127,47 @@ public class WebSocketServer implements Runnable {
                 response.data.put("message", e.getMessage());
             }
 
+            send(gson.toJson(response));
+        }
+
+        // called in case of an error
+        @OnWebSocketError
+        public void onError(Throwable error) {
+            error.printStackTrace();
+        }
+
+        @OnWebSocketConnect
+        public void onConnect(Session session) {
+            this.session = session;
+            System.out.println("Client connected: " + session.toString());
+        }
+
+        @OnWebSocketClose
+        public void onClose(int statusCode, String reason) {
+            System.out.println("Client disconnected: " + session.toString());
+            if (user != null) {
+                connections.remove(user.id);
+            }
+        }
+
+        // sends message to browser
+        private void send(String message) {
             try {
-                this.connection.sendMessage(gson.toJson(response));
+                if (session.isOpen()) {
+                    session.getRemote().sendString(message);
+                }
             } catch (IOException e) {
                 e.printStackTrace();
             }
         }
 
-        @Override
-        public void onOpen(Connection connection) {
-            this.connection = connection;
-            connection.setMaxIdleTime(0);
-            System.out.println("Client connected: " + connection.toString());
-        }
-
-        @Override
-        public void onClose(int closeCode, String message) {
-            System.out.println("Client disconnected: " + connection.toString());
-            if (user != null) {
-                connections.remove(user.id);
+        // closes the socket
+        private void stop() {
+            try {
+                session.disconnect();
+            } catch (IOException e) {
+                e.printStackTrace();
             }
-            connection.close();
         }
     }
 
