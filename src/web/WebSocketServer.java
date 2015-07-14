@@ -1,10 +1,12 @@
 package web;
 
 import com.google.gson.Gson;
+import com.google.gson.JsonSyntaxException;
 import models.db.User;
 import org.bson.types.ObjectId;
 import org.eclipse.jetty.server.Server;
 import org.eclipse.jetty.server.handler.ContextHandler;
+import org.eclipse.jetty.util.thread.ExecutorThreadPool;
 import org.eclipse.jetty.websocket.WebSocket;
 import org.eclipse.jetty.websocket.WebSocketHandler;
 import web.annotations.UserAction;
@@ -16,6 +18,8 @@ import java.io.IOException;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.util.HashMap;
+import java.util.concurrent.LinkedBlockingQueue;
+import java.util.concurrent.TimeUnit;
 
 
 public class WebSocketServer implements Runnable {
@@ -30,6 +34,12 @@ public class WebSocketServer implements Runnable {
             contextHandler.setHandler(new Handler());
             contextHandler.setContextPath("/");
             server.setHandler(contextHandler);
+
+            //thread pool settings
+            LinkedBlockingQueue<Runnable> queue = new LinkedBlockingQueue<>(100);
+            ExecutorThreadPool pool = new ExecutorThreadPool(5, 200, 0, TimeUnit.MILLISECONDS, queue);
+            server.setThreadPool(pool);
+
             server.start();
             server.join();
 
@@ -61,50 +71,57 @@ public class WebSocketServer implements Runnable {
         @Override
         public void onMessage(String data) {
             Gson gson = new Gson();
-            Message msg = gson.fromJson(data.trim(), Message.class);
             Response response = new Response();
-            response.request.put("controller", msg.controller);
-            response.request.put("action", msg.action);
-            response.request.put("id", msg.id);
             try {
+                Message msg = gson.fromJson(data.trim(), Message.class);
+                response.request.put("controller", msg.controller);
+                response.request.put("action", msg.action);
+                response.request.put("id", msg.id);
                 try {
-                    if (msg.action == null) {
-                        throw new IllegalAccessException("Action not specified");
-                    }
-                    if (msg.action.matches(".*[^a-zA-Z].*")) {
-                        throw new IllegalAccessException("Illegal action name");
-                    }
-                    Controller controller = (Controller) Class
-                            .forName("controllers." + msg.controller + "Controller")
-                            .newInstance();
-                    Method action = controller.getClass().getMethod(msg.action, JsonData.class, UserWebSocket.class);
-                    if (action.isAnnotationPresent(PublicAction.class)
-                            || (action.isAnnotationPresent(UserAction.class) && this.user != null)) {
-                        // выкинет исключение если не пройдет валидация
-                        controller.validate(action, msg.data);
-                        response.data = (JsonData) action.invoke(controller, msg.data, this);
-                    } else {
-                        throw new InvalidRequestException("Access forbidden for anonymous user: " + msg.controller + "/" + msg.action);
-                    }
-                    response.status = "success";
-                } catch (NoSuchMethodException | IllegalAccessException e) {
-                    throw new InvalidRequestException("Invalid action: " + msg.action);
-                } catch (NoClassDefFoundError | ClassNotFoundException e) {
-                    throw new InvalidRequestException("Controller not found: " + msg.controller);
-                } catch (InstantiationException e) {
-                    e.printStackTrace();
-                } catch (InvocationTargetException e) {
-                    Throwable targetException = e.getTargetException();
-                    if (targetException instanceof InvalidRequestException) {
-                        throw (InvalidRequestException) targetException;
-                    } else {
+                    try {
+                        if (msg.action == null) {
+                            throw new IllegalAccessException("Action not specified");
+                        }
+                        if (msg.action.matches(".*[^a-zA-Z].*")) {
+                            throw new IllegalAccessException("Illegal action name");
+                        }
+                        Controller controller = (Controller) Class
+                                .forName("controllers." + msg.controller + "Controller")
+                                .newInstance();
+                        Method action = controller.getClass().getMethod(msg.action, JsonData.class, UserWebSocket.class);
+                        if (action.isAnnotationPresent(PublicAction.class)
+                                || (action.isAnnotationPresent(UserAction.class) && this.user != null)) {
+                            // выкинет исключение если не пройдет валидация
+                            controller.validate(action, msg.data);
+                            response.data = (JsonData) action.invoke(controller, msg.data, this);
+                        } else {
+                            throw new InvalidRequestException("Access forbidden for anonymous user: " + msg.controller + "/" + msg.action);
+                        }
+                        response.status = "success";
+                    } catch (NoSuchMethodException | IllegalAccessException e) {
+                        throw new InvalidRequestException("Invalid action: " + msg.action);
+                    } catch (NoClassDefFoundError | ClassNotFoundException e) {
+                        throw new InvalidRequestException("Controller not found: " + msg.controller);
+                    } catch (InstantiationException e) {
                         e.printStackTrace();
+                    } catch (InvocationTargetException e) {
+                        Throwable targetException = e.getTargetException();
+                        if (targetException instanceof InvalidRequestException) {
+                            throw (InvalidRequestException) targetException;
+                        } else {
+                            e.printStackTrace();
+                        }
                     }
+                } catch (InvalidRequestException requestException) {
+                    response.status = "error";
+                    response.data = new JsonData(1);
+                    response.data.put("message", requestException.getMessage());
                 }
-            } catch (InvalidRequestException requestException) {
+
+            } catch (JsonSyntaxException e) {
                 response.status = "error";
                 response.data = new JsonData(1);
-                response.data.put("message", requestException.getMessage());
+                response.data.put("message", e.getMessage());
             }
 
             try {
